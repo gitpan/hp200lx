@@ -1,0 +1,101 @@
+# FILE %gg/perl/HP200LX/README
+#
+# written:       1998-01-10
+# latest update: 1998-06-16 19:58:44
+
+Purpose:
+
+  DB.pm implements the perl package HP200LX::DB which is intended
+  to provide a perl 5 interface for files in the generic database
+  format of the HP 200 LX palmtop computer.  The perl modules are
+  intended to be used on a work station such as a PC or a Unix
+  machine to read and write data records from and to a database
+  file.
+
+Goals and Non-Goals of this Project:
+
+  The primary goal was to read and write complete generic database
+  files, e.g. GDB, PDB or NDB files on a host computer.  The
+  transfer from and to the palmtop computer, synchronization and
+  reconciliation are not considered at all.  Also, other built-in
+  applications operate on slightly different DB files, these
+  are not dealt with yet.  The creation, definition and layout
+  are not handled yet.
+
+  Project Roadmap:
+  1. read/write GDB, PDB, and NDB files [quite complete]
+  2. a simple GUI to browse the DB files [in progress]
+  3. tools to import/export data in different formats [in progress]
+  4. extend the DB module for ADB and WDB files
+  5. creation of DB files including format definitions etc.
+  6. dealing with encrypted DB files
+
+Status:
+
+  The package and any other files are in a completely EXPERIMENTAL
+  STATUS and should not be used without proper backup.  Use it at your
+  own risk, no support can be provided but bug reports and suggestions
+  by e-mail are welcome.  Please read the notes below first.
+
+  **WARNING**  This is already working but it's not completed yet!
+
+Availability and Contact:
+
+  This package is available from my FTP archive
+  ftp://ftp.wu-wien.ac.at/pub/usr/edvz/gonter/hp200lx/
+  and I can be reached as Gerhard.Gonter@wu-wien.ac.at
+  or g.gonter@ieee.org .
+  Redistribution is permitted but it must include the README file.
+
+Copyright:
+
+  Copyright (c) 1998 Gerhard Gonter.  All rights reserved.
+  This is free software; you can redistribute it and or modify
+  it under the same terms as Perl itself.
+
+-----------------------------------------------------------------------------
+
+interface functions
+  $db= HP200LX::DB::openDB ($fnm)     read database and return an DB object
+  $db= HP200LX::DB::new ($fnm)        create database and return an DB object
+  $db->saveDB ($fnm)                  save DB object as a (new) file
+
+array tie implementation to access database data records
+  tie (@dbd, HP200LX::DB, $db);       access database data in array form
+  TIEARRAY                            stub to get an tie for the database
+  FETCH                               retrieve a record         ** UNFINISHED **
+  STORE                               store a record            ** UNFINISHED **
+  $db->get_last_index ()              return highest index
+
+Notes:
+All database data are read from file or written back in one burst.
+No attempt has been made to read data when it is accessed by the
+perl application.  This only complicates matters and does not seem
+to be necessar since a type HP 200 LX only has about 4 MB to store.
+
+
+Things left to be done for later:
+
+  $db2= $db1->dupDB ()                  copy the database
+  $db->clearDB ()                       delete data and note elements
+  $db->delete ($num)                    delete a data record including note
+
+
+retrieve DB format
+$fmt->{$Fieldname}=
+{
+  'type'        => type code,
+  'min_size'    => minimum size to display, e.g. DATE == 10 as in 1998-01-11
+  'max_size'    => maximum size to display
+};
+
+formatted print list output somehow
+
+-----
+possible import/export application which are not too specific:
++ synchronization of a Phone Database with ELM/Pine/Netscape address books
++ Netscape bookmarks
+
+
+
+

@@ -1,0 +1,12 @@
+#
+# FILE %gg/perl/HP200LX/(dirinf).fm
+#
+# written:       1998-03-01
+# latest update: 1998-03-01 12:53:17
+#
+
+README                  general notes
+
+DB.pm                   Database handling module
+DBgui.pm                DB User Interface (Tk)
+

@@ -1,0 +1,417 @@
+head	1.1;
+access;
+symbols;
+locks
+	gonter:1.1; strict;
+comment	@# @;
+
+
+1.1
+date	98.06.16.18.21.32;	author gonter;	state Exp;
+branches;
+next	;
+
+
+desc
+@HP 200LX Database viewpoint handling
+@
+
+
+1.1
+log
+@Initial revision
+@
+text
+@#!/usr/local/bin/perl
+# FILE %gg/perl/HP200LX/DBvpt.pm
+#
+# View Point Management
+# +  retrieve view point definintions
+# +  retrieve view point tables
+#
+# Note:
+# View Points are managed using two associated entities:
+# 1. a view point definition, defining properties such as
+#    + column arrangement
+#    + criteria to select data records included in the view point
+#    + sorting criteria
+# 2. a view point table, containing the actual list of data record
+#    indices in the appropriately sorted sequece and filtered using
+#    the defined SSL criterium.
+#
+# At least one view point (VPT #0) is always present, it does not allow
+# a SSL criterium and always includes all data.  However, sorting criteria
+# and column arrangement are possible
+#
+# included by DB.pm
+#
+# exported functions:
+#   get_viewptdef                       decode a view point definition
+#   find_viewptdef                      retrieve a view point definition
+#   get_viewpttable                     decode a view point table
+#   find_viewpttable                    retrieve a view point table
+#
+# Diagnostics and Debugging:
+#   show_viewptdef                      print details about a view point
+#
+# T2D:
+# + re-calculate a view point table
+#   DONE: SSL parser and evaluater are present but not complete
+#   MISSING: sorting the fields
+# + converter for SSL string to SSL tokens (and vica versa?)
+#   This can be used to edit the SSL string in an application
+# + currently, there is no difference between a view point which
+#   needs to be rebuilt and a view point with no data records.
+#   In both cases, the view point table is empty.
+#
+# written:       1998-06-01
+# latest update: 1998-06-01 12:41:06
+#
+
+package HP200LX::DBvpt;
+
+use Exporter;
+@@ISA= qw(Exporter);
+@@EXPORT= qw(get_viewptdef   find_viewptdef
+            get_viewpttable find_viewpttable);
+
+use strict;
+my $delim= '-' x 74;            # optic delimiter
+my $no_val=  65535;             # NIL, empty list, -1 etc.
+my $MAX_SORT_FIELDS= 3;         # HP-200LX limitation
+
+# ----------------------------------------------------------------------------
+sub get_viewptdef
+{
+  my $def= shift;
+
+  # print "\n", $delim, "\n", ">>>> viewptdef\n"; &HP200LX::DB::hex_dump ($def);
+
+  my ($tok_lng, $str_lng, $flg)= unpack ('vvv', $def);
+  my $name= substr ($def, 7, 32);
+  $name=~ s/\000.*//;
+  $def= substr ($def, 39);
+
+  # print "name='$name'\n";
+
+  # extract sorting information
+  my ($s1, $s2, $s3, $a1, $a2, $a3)= unpack ('vvvvvv', $def);
+  my $sort=
+  [ { 'idx' => $s1, 'asc' => $a1 },
+    { 'idx' => $s2, 'asc' => $a2 },
+    { 'idx' => $s3, 'asc' => $a3 },
+  ];
+
+  # extract column arangements
+  my (@@cols, $i);
+  $def= substr ($def, 12);
+  # &HP200LX::DB::hex_dump ($def);
+  for ($i= 0; $i < 20; $i++)
+  {
+    my ($num, $width)= unpack ('cc', substr ($def, $i*2, 2));
+    last if ($num == -1);
+    push (@@cols, { num => $num, width => $width });
+  }
+
+  # T2D: $def= SSL String; decode SSL tokens+strings
+  $def= substr ($def, 40);
+
+  my $vptd=
+  {
+    'name'      => $name,
+    'flags'     => $flg,
+    'tok_lng'   => $tok_lng,
+    'str_lng'   => $str_lng,
+    'tok_str'   => substr ($def, 0, $tok_lng),
+    'str_str'   => substr ($def, $tok_lng, $str_lng),
+    'sort'      => $sort,
+    'cols'      => \@@cols,
+  };
+
+  &show_viewptdef ($vptd, *STDOUT);
+  $vptd;
+}
+
+# ----------------------------------------------------------------------------
+sub find_viewptdef
+{
+  my $db= shift;
+  my $view= shift;      # name or number of the view
+
+  my $vptdl= $db->{viewptdef};  # view point definition list
+
+  if ($view =~ /^\d+$/)
+  {
+    return ($view >= 0 && $view <= $#$vptdl) ? $vptdl->[$view] : undef;
+  }
+
+  # T2D: this should be part of a function to retrieve
+  #      the view point number of a named view point!!!
+  my ($v, $vptd);
+  foreach $v (@@$vptdl)
+  {
+    if ($v->{name} eq $view) { $vptd= $v; last; }
+  }
+  $vptd;
+}
+
+# ----------------------------------------------------------------------------
+sub show_viewptdef
+{
+  my $vptd= shift;
+  local *FX= shift;
+  my ($i, $ci);
+
+  print FX $delim, "\nViewpoint '", $vptd->{name},
+           "' flags=", $vptd->{flags},
+           " tok_lng=", $vptd->{tok_lng},
+           " str_lng=", $vptd->{str_lng}, "\n";
+  my $s= $vptd->{sort};
+  my $c= $vptd->{cols};
+  for ($i= 0; $i < 3; $i++)
+  {
+    printf FX ("sort field: %3d %d\n", $s->[$i]->{idx}, $s->[$i]->{asc});
+  }
+
+  foreach $ci (@@$c)
+  {
+    printf FX ("column field: %3d width=%2d\n", $ci->{num}, $ci->{width});
+  }
+
+  my $def= $vptd->{tok_str};
+  print FX "SSL tokens: lng=", length ($def), "\n";
+  &HP200LX::DB::hex_dump ($def, *FX);
+
+  my $def= $vptd->{str_str};
+  print FX "SSL string: lng=", length ($def), "\n";
+  &HP200LX::DB::hex_dump ($def, *FX);
+
+  print FX $delim, "\n\n";
+}
+
+# ----------------------------------------------------------------------------
+sub get_viewpttable
+{
+  my $def= shift;
+  my ($l, $v);
+  my @@vptt= ();
+  my $lng= length ($def);
+
+  # print "\n", $delim, "\n", ">>>> viewpttable\n"; &HP200LX::DB::hex_dump ($def);
+  for ($l= 0; $l < $lng; $l += 2)
+  {
+    ($v)= unpack ('v', substr ($def, $l, 2));
+    last if ($v == $no_val);
+    push (@@vptt, $v);
+  }
+  \@@vptt;
+}
+
+# ----------------------------------------------------------------------------
+sub find_viewpttable
+{
+  my $db= shift;
+  my $view= shift;      # number of the view
+
+  my $vpttl= $db->{viewpttable};  # view point table list
+
+  return undef unless ($view >= 0 && $view <= $#$vpttl);
+  my $vptt= $vpttl->[$view];
+
+  if ($#$vptt < 0)
+  {
+    my $vptdl= $db->{viewptdef};  # view point definition list
+    my $vptd= $vptdl->[$view];
+    
+    $vptt= $vpttl->[$view]= &refresh_viewpt ($db, $vptd);
+  }
+
+  $vptt;
+}
+
+# ----------------------------------------------------------------------------
+sub refresh_viewpt
+{
+  my $db= shift;
+  my $vptd= shift;
+  my $vptt= [];
+
+  my @@SSL= &parse_ssl_tok_str ($vptd->{tok_str});
+  my $ssls= $vptd->{str_str};
+  my $fd= $db->{fielddef};
+  my $sort;     # sort definition
+  my @@sort;
+  my @@SORT;     # names of sort fields
+  my $T= {};    # sorted records by sort fields
+
+  my ($i, $j, $x, $y, $z, $op, $rec, $match, $SSL, @@ST);
+  $rec= $sort= $vptd->{sort};
+  for ($i= 0; $i < $MAX_SORT_FIELDS; $i++)
+  {
+    $y= $rec->[$i];
+    $x= $fd->[$y->{idx}];
+    last if ($x == $no_val);
+    push (@@SORT, $y->{name}= $x->{name});
+
+    # get the sort mode handy:
+    # 0= ascending string, 1= descending string,
+    # 2= ascending number, 3= descending number
+    $z= ($x->{ftype} == 4) ? 1 : 0;
+    $z= $z*2+ (($y->{asc}) ? 0 : 1);
+    $y->{smode}= $z;
+  }
+
+  print "refreshing view point; ssl_str=$ssls\n";
+
+  my $cnt= $db->get_last_index ();    # total number of records
+  for ($i= 0; $i <= $cnt; $i++)
+  {
+    if ($#SSL < 0)
+    {
+      $match= 1;  # no SSL string thus use everything!
+    }
+    else
+    { # SSL was defined
+      $match= 0;
+      $rec= $db->FETCH ($i);
+      # print "rec: ", join (':', keys %$rec), "\n";
+
+      # this is the SSL match engine, it works like a mini FORTH interpreter
+      @@ST= ();
+      foreach $SSL (@@SSL)
+      {
+        $op= $SSL->{op};
+
+        if ($op == 0x0012)
+        { # convert field index to name
+          $x= $fd->[$SSL->{idx}]->{name};
+          $SSL->{name}= $x;
+          $op= $SSL->{op}= 0x0112;
+        }
+
+           if ($op == 0x0011) { push (@@ST, $SSL->{str}); }
+        elsif ($op == 0x0112) { push (@@ST, $rec->{$SSL->{name}}); }
+        elsif ($op == 0x000B)
+        {
+          $x= pop (@@ST);
+          $y= pop (@@ST);
+          $z= ($y =~ /$x/);
+          # print "contains: $x in $y -> $z\n";
+          push (@@ST, $z);
+        }
+        elsif ($op == 0x0018)
+        {
+          $z= pop (@@ST);
+          $match= 1 if ($z);
+          # print "MATCH: $match\n";
+        }
+      }
+    }
+
+    if ($match)
+    {
+      # T2D: sort new item
+      # push (@@$vptt, $i);
+
+      # search the array reference holding the record indices
+      # $T->{$rec->{$SORT[0]}}->...->{$rec->{$SORT[n]}}= [ rec indices ]
+      $x= $T; $j= 0;
+      for ($j= 0; $j <= $#SORT; $j++)
+      {
+        $y= $rec->{$SORT[$j]};
+        if (defined ($z= $x->{$y})) { $x= $z; }
+        else { $x= $x->{$y}= ($j == $#SORT) ? [] : {}; }
+      }
+      push (@@$x, $i);
+    }
+  }
+
+  @@sort= @@$sort;
+  &sort_viewpt ($vptt, $T, @@sort);
+
+  $vptt;
+}
+
+# ----------------------------------------------------------------------------
+sub sort_viewpt
+{
+  my ($vptt, $T, @@sort)= @@_;
+  my (@@keys, $key);
+
+  if (ref ($T) eq 'ARRAY')
+  { # final leaf in the sort tree reached, push the array up...
+    push (@@$vptt, @@$T);
+  }
+  elsif (ref ($T) eq 'HASH')
+  {
+    my $s= shift (@@sort);
+
+       if ($s->{smode} == 0) { @@keys= sort keys %$T; }
+    elsif ($s->{smode} == 1) { @@keys= reverse sort keys %$T; }
+    elsif ($s->{smode} == 2) { @@keys= sort {$a <=> $b} keys %$T; }
+    elsif ($s->{smode} == 3) { @@keys= sort {$b <=> $a} keys %$T; }
+
+    foreach $key (@@keys)
+    {
+      &sort_viewpt ($vptt, $T->{$key}, @@sort);
+    }
+  }
+}
+
+# ----------------------------------------------------------------------------
+sub parse_ssl_tok_str
+{
+  my $str= shift;
+  my @@res;
+
+  my $i= 0;
+  my ($ci, $nv);
+  while (1)
+  {
+    $ci= unpack ('C', substr ($str, $i, 1));
+
+    if ($ci == 0x0B) # string contains
+    {
+      $i++;
+      push (@@res, { op => $ci });
+    }
+    elsif ($ci == 0x11) # String token
+    {
+      $i++;
+      $nv= '';
+      while (1)
+      {
+        $ci= substr ($str, $i++, 1);
+        last if ($ci eq "\x00");
+        $nv .= $ci;
+      }
+      print "str: $nv\n";
+      push (@@res, { op => 0x11, str => $nv });
+    }
+    elsif ($ci == 0x12) # field index token
+    {
+      $nv= unpack ('v', substr ($str, $i+1, 2));
+      $i += 3;
+      print "field index: $nv\n";
+      push (@@res, { op => 0x12, idx => $nv });
+    }
+    elsif ($ci == 0x18) # last token
+    {
+      push (@@res, { op => 0x18 });
+      last;
+    }
+    else
+    {
+      printf (">>> unknwon SSL token [%d] 0x%02X\n", $i, $ci);
+      $i++;
+    }
+  }
+
+  print "done parsing\n";
+
+  @@res;
+}
+
+# ----------------------------------------------------------------------------
+1;
+@
