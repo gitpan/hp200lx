@@ -1,10 +1,15 @@
-head	1.1;
+head	1.2;
 access;
 symbols;
 locks
-	gonter:1.1; strict;
+	gonter:1.2; strict;
 comment	@# @;
 
+
+1.2
+date	98.06.18.14.38.17;	author gonter;	state Exp;
+branches;
+next	1.1;
 
 1.1
 date	98.06.16.18.21.32;	author gonter;	state Exp;
@@ -17,9 +22,9 @@ desc
 @
 
 
-1.1
+1.2
 log
-@Initial revision
+@debugging calls removed
 @
 text
 @#!/usr/local/bin/perl
@@ -65,7 +70,7 @@ text
 #   In both cases, the view point table is empty.
 #
 # written:       1998-06-01
-# latest update: 1998-06-01 12:41:06
+# latest update: 1998-06-18 16:36:00
 #
 
 package HP200LX::DBvpt;
@@ -128,7 +133,7 @@ sub get_viewptdef
     'cols'      => \@@cols,
   };
 
-  &show_viewptdef ($vptd, *STDOUT);
+  # &show_viewptdef ($vptd, *STDOUT);
   $vptd;
 }
 
@@ -414,4 +419,18 @@ sub parse_ssl_tok_str
 
 # ----------------------------------------------------------------------------
 1;
+@
+
+
+1.1
+log
+@Initial revision
+@
+text
+@d44 1
+a44 1
+# latest update: 1998-06-01 12:41:06
+d107 1
+a107 1
+  &show_viewptdef ($vptd, *STDOUT);
 @

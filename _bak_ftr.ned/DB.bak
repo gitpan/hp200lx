@@ -5,7 +5,7 @@
 # See POD Section for a few more details
 #
 # written:       1997-12-28 (c) g.gonter@ieee.org
-# latest update: 1998-03-23 18:15:47
+# latest update: 1998-06-18 16:32:17
 #
 package HP200LX::DB;
 
@@ -17,7 +17,7 @@ use AutoLoader;
 
 @ISA = qw(Exporter AutoLoader);
 @EXPORT_OK= qw(openDB saveDB);
-$VERSION = '0.01';
+$VERSION = '0.02';
 
 use HP200LX::DBvpt;     # view point management, including vpt definition
 
@@ -330,7 +330,7 @@ sub openDB
     $i++;
     if ($siz < 0 || $off < 0)
     {
-      print "[$i] type=???? siz=$siz off=$off\n";
+      # print "[$i] type=???? siz=$siz off=$off\n";
       next;
     }
 
@@ -433,7 +433,7 @@ sub openDB
 
     push (@{$obj->{Types}->[$type]}, $xrec);
   }
-  print "LUT table size: i=$i\n";
+  # print "LUT table size: i=$i\n";
 
   close (FI);
 
@@ -1530,7 +1530,7 @@ HP200LX::DB - Perl extension to access HP-200 LX database files
 
 =head1 SEE ALSO
 
-  http://falbala.wu-wien.ac.at:8684/bscw/bscw.cgi/0/24065
+  http://falbala.wu-wien.ac.at:8684/pub/english.cgi/0/24065
   perl(1).
 
 =cut

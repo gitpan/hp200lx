@@ -1,0 +1,6 @@
+0  25    4   0  10 1 1 32760
+ 17   0   1 <hyx.l name="ARGUMENT" tdc="mark" tdp=8>
+ 25   7   1 <hyx.l mark="usage" tdc="hyx.l" tdp=5>
+ 36   3   1 <hyx.l tdc="hyx.l" tdp=9 mark=print_gdb>
+ 44   4   1 <hyx.l name="usage" tdc="mark" tdp=5>
+ 55   4   1 <hyx.l tdc=mark tdp=9 name=print_gdb>

@@ -8,6 +8,3 @@ DBvpt.pm
 MANIFEST
 Makefile.PL
 test.pl
-demo/demo1.pl
-scripts/catdb.pl
-

@@ -41,7 +41,7 @@
 #   In both cases, the view point table is empty.
 #
 # written:       1998-06-01
-# latest update: 1998-06-01 12:41:06
+# latest update: 1998-06-18 16:36:00
 #
 
 package HP200LX::DBvpt;
@@ -104,7 +104,7 @@ sub get_viewptdef
     'cols'      => \@cols,
   };
 
-  &show_viewptdef ($vptd, *STDOUT);
+  # &show_viewptdef ($vptd, *STDOUT);
   $vptd;
 }
 
